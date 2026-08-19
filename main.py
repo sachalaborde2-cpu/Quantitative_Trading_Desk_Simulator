@@ -24,7 +24,7 @@ while True:
         break
     else:
         strike = float(input("Strike : "))
-        option_type = input("Option Type ( Call or Put) : ")
+        option_type = input("Option Type ( Call or Put) : ").lower()
         action_type = input ("Buy/Sell : ")
         ticker = input("Ticker de l'action (ex: AAPL) : ").upper()
         quantity = int(input ("Quantity : "))
@@ -41,7 +41,7 @@ while True:
         mm_desk.execute_trade(quantity,bid,option_id,client_action)
     else:
         client_action = "buy"
-        mm_desk.execute_trade(-quantity,ask,option_id,client_action)
+        mm_desk.execute_trade(quantity,ask,option_id,client_action)
 
     risque_delta = mm_desk.inventory[option_id] * delta_order
 
