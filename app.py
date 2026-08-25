@@ -88,7 +88,7 @@ if submitted:
             desk.execute_trade(quantity, bid, option_id, client_action)
         else:
             client_action = "buy"
-            desk.execute_trade(-quantity, ask, option_id, client_action)
+            desk.execute_trade(quantity, ask, option_id, client_action)
             
         # 4. Delta Hedging
         risque_delta = desk.inventory[option_id] * delta_order
