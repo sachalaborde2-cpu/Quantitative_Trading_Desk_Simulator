@@ -64,30 +64,7 @@ class MarketMaker:
 
     
 
-if __name__=="__main__":
-        MarketMaker_1=MarketMaker()
-        theorical_price=10
 
-        bid_initial= MarketMaker_1.quote_price(theorical_price)[0]
-        ask_initial= MarketMaker_1.quote_price(theorical_price)[1]
-
-        print(bid_initial,ask_initial)
-
-        results= MarketMaker_1.execute_trade(500,10.05)
-
-        print(results)
-
-        new_bid=MarketMaker_1.quote_price(theorical_price)[0]
-        new_ask=MarketMaker_1.quote_price(theorical_price)[1]
-
-        print(new_bid,new_ask)
-
-        spot_price = 100
-        delta_option = 0.5
-
-        MarketMaker_1.hedge_delta(delta_option,spot_price)
-
-        print(f"The MM has the current position: Cash: {MarketMaker_1.cash}, Inventory: {MarketMaker_1.inventory}, Stocks_quantity: {MarketMaker_1.stocks_quantity} ")
 
 
 
