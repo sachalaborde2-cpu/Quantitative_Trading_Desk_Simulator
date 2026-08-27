@@ -2,25 +2,12 @@ import numpy as np
 from scipy.stats import norm
 import math
 from scipy.optimize import brentq
+from pricing_engine.base import Option
 
-class EuropeanOption:
+class EuropeanOption(Option):
     def __init__(self, spot, strike, time_to_maturity, risk_free_rate, volatility, option_type='call'):
-        """
-        Initialization of a European option.
-        
-        :param spot: Current price of the underlying asset (S)
-        :param strike: Strike price (K)
-        :param time_to_maturity: Time to maturity in years (T)
-        :param risk_free_rate: Risk-free interest rate (r)
-        :param volatility: Volatility of the underlying asset (sigma)
-        :param option_type: 'call' or 'put'
-        """
-        self.S = spot
-        self.K = strike
-        self.T = time_to_maturity
-        self.r = risk_free_rate
-        self.sigma = volatility
-        self.option_type = option_type.lower()
+        super().__init__(spot, strike, time_to_maturity, risk_free_rate, volatility, option_type) 
+       
 
     def d1(self):
         return (np.log(self.S/self.K)+(self.r+(self.sigma**2)/2)*self.T)/(self.sigma*np.sqrt(self.T))
