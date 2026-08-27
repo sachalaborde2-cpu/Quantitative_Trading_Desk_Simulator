@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import streamlit.components.v1 as components
 
 # --- IMPORTS BACKEND ---
 from market_data.data_feed import get_mock_option_chain
@@ -13,21 +14,269 @@ from market_making.pricer_mm import MarketMaker
 
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(
-    page_title="Quantitative Trading Desk", 
-    page_icon="📈", 
+    page_title="Quant Desk // Terminal", 
+    page_icon="🕹️", 
     layout="wide", 
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS pour peaufiner le style (couleurs des métriques)
+# --- THÈME "TERMINAL MATRIX" (couleurs, typographie, effets) ---
 st.markdown("""
     <style>
-    [data-testid="stMetricValue"] {
-        font-size: 2rem;
-        color: #00FFAA;
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap');
+
+    :root {
+        --bg-void: #05070a;
+        --bg-panel: #0a0f0d;
+        --bg-panel-alt: #0d1512;
+        --border-dim: #163326;
+        --matrix-green: #39ff88;
+        --matrix-green-dim: #1f7a4d;
+        --signal-red: #ff3b5c;
+        --signal-amber: #ffb020;
+        --text-primary: #d7ffe4;
+        --text-secondary: #4f6e5c;
     }
+
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
+        background-color: var(--bg-void) !important;
+        color: var(--text-primary) !important;
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+
+    [data-testid="stHeader"] { background-color: transparent !important; }
+
+    /* fin voile de scanlines sur toute l'app */
+    [data-testid="stAppViewContainer"]::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+            180deg,
+            rgba(57, 255, 136, 0.025) 0px,
+            rgba(57, 255, 136, 0.025) 1px,
+            transparent 1px,
+            transparent 3px
+        );
+        z-index: 999;
+    }
+
+    [data-testid="stSidebar"] {
+        background-color: var(--bg-panel) !important;
+        border-right: 1px solid var(--border-dim);
+    }
+
+    h1, h2, h3 {
+        font-family: 'JetBrains Mono', monospace !important;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--matrix-green) !important;
+        text-shadow: 0 0 8px rgba(57,255,136,0.35);
+    }
+
+    p, span, label, div { font-family: 'JetBrains Mono', monospace; }
+
+    hr { border-color: var(--border-dim) !important; }
+
+    /* --- KPI / Grecques (st.metric) --- */
+    [data-testid="stMetric"] {
+        background: linear-gradient(180deg, var(--bg-panel-alt), var(--bg-panel));
+        border: 1px solid var(--border-dim);
+        border-radius: 4px;
+        padding: 0.9rem 1rem;
+    }
+    [data-testid="stMetricLabel"] {
+        color: var(--text-secondary) !important;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 0.72rem !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-size: 1.9rem !important;
+        color: var(--matrix-green) !important;
+        text-shadow: 0 0 10px rgba(57,255,136,0.55);
+        font-weight: 700 !important;
+    }
+
+    /* --- Boutons --- */
+    .stButton button, [data-testid="stFormSubmitButton"] button {
+        background: transparent !important;
+        border: 1px solid var(--matrix-green-dim) !important;
+        color: var(--matrix-green) !important;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-family: 'JetBrains Mono', monospace !important;
+        transition: all 0.2s ease;
+        width: 100%;
+    }
+    .stButton button:hover, [data-testid="stFormSubmitButton"] button:hover {
+        background: rgba(57,255,136,0.08) !important;
+        border-color: var(--matrix-green) !important;
+        box-shadow: 0 0 14px rgba(57,255,136,0.4);
+        color: var(--matrix-green) !important;
+    }
+
+    /* --- Champs de saisie --- */
+    input, textarea, [data-baseweb="select"] > div, [data-baseweb="input"] {
+        background-color: var(--bg-panel-alt) !important;
+        border-color: var(--border-dim) !important;
+        color: var(--text-primary) !important;
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+    [data-testid="stForm"] {
+        border: 1px solid var(--border-dim);
+        border-radius: 4px;
+        background: var(--bg-panel-alt);
+    }
+
+    /* --- Tableau (book du desk) --- */
+    [data-testid="stDataFrame"] { border: 1px solid var(--border-dim); }
+
+    /* --- Alertes --- */
+    [data-testid="stAlert"] {
+        font-family: 'JetBrains Mono', monospace !important;
+        border-radius: 2px;
+    }
+
+    /* --- Scrollbar --- */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-void); }
+    ::-webkit-scrollbar-thumb { background: var(--matrix-green-dim); border-radius: 4px; }
+
+    /* --- Panneau OPERATOR --- */
+    .operator-panel {
+        background: var(--bg-panel);
+        border: 1px solid var(--matrix-green-dim);
+        border-radius: 4px;
+        padding: 0.8rem 0.9rem;
+        margin-bottom: 0.6rem;
+    }
+    .operator-ascii {
+        color: var(--matrix-green);
+        font-size: 0.6rem;
+        line-height: 1.05;
+        white-space: pre;
+        text-shadow: 0 0 6px rgba(57,255,136,0.5);
+        margin: 0 0 0.5rem 0;
+        text-align: center;
+    }
+    .operator-heading {
+        color: var(--text-secondary);
+        font-size: 0.68rem;
+        letter-spacing: 0.15em;
+        margin-bottom: 0.45rem;
+    }
+    .operator-cursor {
+        display: inline-block;
+        width: 7px;
+        background: var(--matrix-green);
+        animation: blink 1s steps(1) infinite;
+    }
+    .operator-log {
+        max-height: 150px;
+        overflow-y: auto;
+        font-size: 0.7rem;
+        line-height: 1.5;
+    }
+    .operator-log .log-line { color: var(--text-secondary); margin: 1px 0; }
+    .operator-log .log-line.success { color: var(--matrix-green); }
+    .operator-log .log-line.error { color: var(--signal-red); }
+    @keyframes blink { 50% { opacity: 0; } }
     </style>
 """, unsafe_allow_html=True)
+
+
+# --- OPERATOR : avatar ASCII + journal d'actions du desk ---
+#
+# C'est le "personnage" qui exécute les trades : un panneau HUD affiché dans la
+# sidebar, avec un journal des dernières actions du desk (exécutions, couvertures,
+# erreurs), mis à jour à chaque interaction.
+
+_OPERATOR_ASCII = """  ▄▄▄▄▄▄▄
+ █ ● ● █
+ █   ▽  █
+ ▀▀▄▄▄▄▀▀
+  ┌─┴─┐
+  │MM1│
+  └───┘"""
+
+
+def log_operator(message, level="info"):
+    """Ajoute une ligne au journal de l'OPERATOR (conserve les 8 dernières)."""
+    st.session_state.operator_log.append({"text": message, "level": level})
+    st.session_state.operator_log = st.session_state.operator_log[-8:]
+
+
+def render_operator_panel():
+    """Construit le HTML du panneau OPERATOR à partir du journal courant."""
+    log_html = "".join(
+        f'<div class="log-line {entry["level"]}">&gt; {entry["text"]}</div>'
+        for entry in st.session_state.operator_log
+    )
+    st.markdown(
+        f"""
+        <div class="operator-panel">
+            <pre class="operator-ascii">{_OPERATOR_ASCII}</pre>
+            <div class="operator-heading">OPERATOR MM-01<span class="operator-cursor">&nbsp;</span></div>
+            <div class="operator-log">{log_html}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_hero_banner():
+    """Bannière d'en-tête : pluie de caractères façon Matrix (canvas JS) + titre incrusté."""
+    components.html(
+        """
+        <div style="position:relative;width:100%;height:150px;overflow:hidden;
+                    border:1px solid #1f7a4d;border-radius:4px;background:#05070a;">
+          <canvas id="matrixCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                      text-align:center;font-family:'JetBrains Mono',monospace;">
+            <div style="font-size:2rem;font-weight:800;letter-spacing:0.3em;color:#d7ffe4;
+                        text-shadow:0 0 14px rgba(57,255,136,0.8),0 0 28px rgba(57,255,136,0.4);">
+              QUANT DESK
+            </div>
+            <div style="font-size:0.8rem;letter-spacing:0.28em;color:#39ff88;margin-top:6px;">
+              MARKET MAKING TERMINAL // OPERATOR ACTIVE
+            </div>
+          </div>
+        </div>
+        <script>
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+        function resize() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        const chars = "アカサタナ01ΣΩΔ$€%+-";
+        const fontSize = 14;
+        let drops = new Array(Math.floor(canvas.width / fontSize)).fill(1);
+
+        function draw() {
+            ctx.fillStyle = "rgba(5,7,10,0.15)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#39ff88";
+            ctx.font = fontSize + "px monospace";
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+        setInterval(draw, 45);
+        </script>
+        """,
+        height=155,
+    )
 
 
 # --- MOTEUR DE GRECQUES (BLACK-SCHOLES + MONTE CARLO) ---
@@ -117,6 +366,9 @@ if 'position_details' not in st.session_state:
     # recalculer son prix et ses grecques à tout moment (modèle utilisé, strike, T, IV, ...)
     st.session_state.position_details = {}
 
+if 'operator_log' not in st.session_state:
+    st.session_state.operator_log = [{"text": "SYSTÈME INITIALISÉ. OPERATOR MM-01 EN LIGNE.", "level": "info"}]
+
 if 'market_data' not in st.session_state:
     # On charge les données une seule fois au démarrage
     spot_price, expiration_date, raw_chain = get_mock_option_chain()
@@ -133,6 +385,8 @@ spot = st.session_state.spot_price
 r = st.session_state.r
 
 # --- SIDEBAR : TERMINAL D'EXÉCUTION ---
+operator_slot = st.sidebar.empty()  # rempli en bas de script, une fois le journal à jour
+
 st.sidebar.title("⚡ Ordres d'Exécution")
 st.sidebar.markdown("---")
 
@@ -222,11 +476,20 @@ if submitted:
         desk.hedge_delta(ticker, risque_delta, spot)
         
         st.sidebar.success(f"Ordre rempli ({pricing_model}) ! Couverture Delta ajustée sur {ticker}.")
+        log_operator(f"{action_type.upper()} {quantity} {option_id} [{pricing_model.split(' ')[0]}] EXÉCUTÉ", "success")
+        log_operator(f"COUVERTURE DELTA AJUSTÉE SUR {ticker}", "success")
     except IndexError:
         st.sidebar.error("Ce strike n'existe pas dans le carnet actuel.")
+        log_operator(f"ERREUR: STRIKE {strike} INTROUVABLE", "error")
+
+# Le panneau OPERATOR est rendu ici, en dernier, pour refléter le journal à jour
+# de cette exécution — mais grâce au placeholder réservé plus haut, il s'affiche
+# bien tout en haut de la sidebar.
+with operator_slot.container():
+    render_operator_panel()
 
 # --- MAIN DASHBOARD (AFFICHAGE) ---
-st.title("📊 Quantitative Market Making Desk")
+render_hero_banner()
 st.markdown("---")
 
 # 1. Constantes Vitales (KPIs)
@@ -313,23 +576,23 @@ with col_left:
 with col_right:
     st.subheader("📈 Volatility Skew")
     
-    # Graphique Matplotlib adapté pour un thème sombre
+    # Graphique Matplotlib adapté au thème Terminal Matrix
     fig, ax = plt.subplots(figsize=(6, 4))
     
-    # Couleurs néon pour le style trading
-    ax.plot(data['calls']["strike"], data['calls']["IV"], marker="o", linestyle="-", color="#00FFAA", label="Calls")
-    ax.plot(data['puts']["strike"], data['puts']["IV"], marker="x", linestyle="--", color="#FF4B4B", label="Puts")
+    # Mêmes couleurs que le thème (vert Matrix / rouge signal)
+    ax.plot(data['calls']["strike"], data['calls']["IV"], marker="o", linestyle="-", color="#39ff88", label="Calls")
+    ax.plot(data['puts']["strike"], data['puts']["IV"], marker="x", linestyle="--", color="#ff3b5c", label="Puts")
     
     # Nettoyage du graphique
-    ax.set_facecolor('#0E1117')
-    fig.patch.set_facecolor('#0E1117')
-    ax.tick_params(colors='white')
-    ax.xaxis.label.set_color('gray')
-    ax.yaxis.label.set_color('gray')
+    ax.set_facecolor('#05070a')
+    fig.patch.set_facecolor('#05070a')
+    ax.tick_params(colors='#d7ffe4')
+    ax.xaxis.label.set_color('#4f6e5c')
+    ax.yaxis.label.set_color('#4f6e5c')
     for spine in ax.spines.values():
-        spine.set_edgecolor('#333333')
+        spine.set_edgecolor('#163326')
         
-    ax.legend(facecolor='#0E1117', labelcolor='white', edgecolor='#333333')
+    ax.legend(facecolor='#05070a', labelcolor='#d7ffe4', edgecolor='#163326')
     
     # Affichage dans Streamlit
     st.pyplot(fig)
