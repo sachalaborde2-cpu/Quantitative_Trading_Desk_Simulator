@@ -17,6 +17,6 @@ def test_call_put_parity():
     RP=Call1.price()-Put1.price()
     LP=Spot - Strike*np.exp(-Risk_free_rate*Maturity)
 
-    return np.testing.assert_almost_equal(RP, LP, decimal=5)
+    np.testing.assert_almost_equal(RP, LP, decimal=5)
 
 
