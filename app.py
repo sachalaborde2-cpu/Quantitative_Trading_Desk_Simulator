@@ -251,6 +251,7 @@ st.subheader("🧮 Grecques du Portefeuille")
 
 portfolio_delta = portfolio_gamma = portfolio_vega = portfolio_theta = portfolio_rho = 0.0
 
+# Grecques des positions optionnelles
 for option_id, qty in desk.inventory.items():
     if qty == 0 or option_id not in st.session_state.position_details:
         continue
@@ -261,6 +262,13 @@ for option_id, qty in desk.inventory.items():
     portfolio_vega += qty * greeks["vega"]
     portfolio_theta += qty * greeks["theta"]
     portfolio_rho += qty * greeks["rho"]
+
+# Grecques de la couverture en actions : une action a un delta de 1 par construction
+# (et gamma/vega/theta/rho nuls dans ce modèle), donc elle contribue au delta du
+# portefeuille quantité pour quantité. Sans ce bloc, le delta affiché ignorait
+# la couverture déjà exécutée par le desk et ne pouvait jamais se rapprocher de zéro.
+for ticker_hedge, qty_shares in desk.stocks_quantity.items():
+    portfolio_delta += qty_shares
 
 g1, g2, g3, g4, g5 = st.columns(5)
 g1.metric(label="Delta", value=f"{portfolio_delta:,.2f}")
@@ -275,17 +283,29 @@ st.markdown("---")
 col_left, col_right = st.columns([1.2, 1])
 
 with col_left:
-    st.subheader("📋 Inventaire des Options")
-    if desk.inventory:
-        # Transformation du dictionnaire en DataFrame esthétique
-        inv_df = pd.DataFrame([
-            {
-                "Option ID": opt_id,
-                "Position": qty,
-                "Modèle": st.session_state.position_details.get(opt_id, {}).get("model", "?"),
-            }
-            for opt_id, qty in desk.inventory.items()
-        ])
+    st.subheader("📋 Book du Desk")
+    book_rows = []
+
+    # Positions optionnelles
+    for opt_id, qty in desk.inventory.items():
+        book_rows.append({
+            "Instrument": opt_id,
+            "Type": "Option",
+            "Position": qty,
+            "Modèle": st.session_state.position_details.get(opt_id, {}).get("model", "?"),
+        })
+
+    # Positions de couverture en actions (issues du delta hedging)
+    for ticker_hedge, qty_shares in desk.stocks_quantity.items():
+        book_rows.append({
+            "Instrument": ticker_hedge,
+            "Type": "Action (Hedge)",
+            "Position": qty_shares,
+            "Modèle": "-",
+        })
+
+    if book_rows:
+        inv_df = pd.DataFrame(book_rows)
         st.dataframe(inv_df, use_container_width=True, hide_index=True)
     else:
         st.info("Carnet vide. En attente de liquidité...")
